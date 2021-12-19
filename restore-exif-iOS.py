@@ -33,13 +33,16 @@ def get_filepaths(path, recursive):
     else:
         for dirpath, dirnames, filenames in os.walk(path):
             abspath = os.path.abspath(dirpath)
-            all_filepaths += [(abspath, f) for f in filenames
-                              if f not in ignored_files]
+            all_filepaths += [(abspath, f) for f in filenames if f not in ignored_files]
     return all_filepaths
 
 
 def filter_filepaths(filepaths, allowed_ext):
     return [(fp, fn) for fp, fn in filepaths if os.path.splitext(fn)[-1] in allowed_ext]
+
+
+def filtered_filepaths(unfiltered_fps, filepaths):
+    return [i for i in unfiltered_fps if i not in filepaths]
 
 
 def make_new_exif(filename):
@@ -70,9 +73,13 @@ def main(path, recursive, mod):
 
     allowed_extensions = set(['.mp4', '.jpg', '.3gp', '.jpeg'])
     logger.info(f'Filtering for valid file extensions: {allowed_extensions}')
+    unfiltered_fps = filepaths.copy()
     filepaths = filter_filepaths(filepaths, allowed_ext=allowed_extensions)
     num_files = len(filepaths)
     logger.info(f'Valid files: {num_files}')
+    filtered_fps = filtered_filepaths(unfiltered_fps, filepaths)
+    num_filtered_files = len(filtered_fps)
+    logger.info(f'Invalid files: {num_filtered_files}')
 
     logger.info('Begin processing files')
     abspath = os.path.abspath(path)
@@ -80,6 +87,7 @@ def main(path, recursive, mod):
     abspath_len = len(abspath) + 1
     for i, (path, filename) in enumerate(filepaths):
         filepath = os.path.join(path, filename)
+        # TODO: need to double check logger.info line below
         logger.info(
             f'{i + 1:>{progress_digits}}/{num_files} - {filepath[abspath_len:]}')
         if filename.endswith('.mp4') or filename.endswith('.3gp'):
@@ -118,6 +126,13 @@ def main(path, recursive, mod):
 
     logger.info('Finished processing files')
 
+    logger.info('Excluded files:')
+    progress_digits = len(str(num_filtered_files))
+    for i, (path, filename) in enumerate(filtered_fps):
+        filepath = os.path.join(path, filename)
+        # TODO: need to double check logger.info line below
+        logger.info(
+            f'{i + 1:>{progress_digits}}/{num_filtered_files} - {filepath[abspath_len:]}')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
