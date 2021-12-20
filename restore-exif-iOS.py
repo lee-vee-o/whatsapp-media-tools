@@ -29,11 +29,15 @@ def get_filepaths(path, recursive):
     if not recursive:
         abspath = os.path.abspath(path)
         all_filepaths += [(abspath, f) for f in os.listdir(abspath)
-                          if (os.path.isfile(os.path.join(abspath, f)) and f not in ignored_files)]
+                          if (os.path.isfile(os.path.join(abspath, f))
+                              and f not in ignored_files
+                              and not f.startswith("._"))]
     else:
         for dirpath, dirnames, filenames in os.walk(path):
             abspath = os.path.abspath(dirpath)
-            all_filepaths += [(abspath, f) for f in filenames if f not in ignored_files]
+            all_filepaths += [(abspath, f) for f in filenames
+                              if (f not in ignored_files
+                                  and not f.startswith("._"))]
     return all_filepaths
 
 
@@ -78,8 +82,6 @@ def main(path, recursive, mod):
     num_files = len(filepaths)
     logger.info(f'Valid files: {num_files}')
     filtered_fps = filtered_filepaths(unfiltered_fps, filepaths)
-    num_filtered_files = len(filtered_fps)
-    logger.info(f'Invalid files: {num_filtered_files}')
 
     logger.info('Begin processing files')
     abspath = os.path.abspath(path)
@@ -125,7 +127,8 @@ def main(path, recursive, mod):
                 os.utime(filepath, (modTime, modTime))
 
     logger.info('Finished processing files')
-
+    num_filtered_files = len(filtered_fps)
+    logger.info(f'Excluded files: {num_filtered_files}')
     logger.info('Excluded files:')
     progress_digits = len(str(num_filtered_files))
     for i, (path, filename) in enumerate(filtered_fps):
@@ -145,7 +148,8 @@ if __name__ == "__main__":
                         action='store_true', help='Set file created/modified date on top of exif for images')
     args = parser.parse_args()
 
-    logging.basicConfig(
+    logfilename = os.path.abspath(args.path) + "/" + datetime.now().strftime('_log_%Y_%m_%d_%H_%M_%S.log')
+    logging.basicConfig(filename=logfilename, filemode="w",
         level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s: %(message)s')
     logger = logging.getLogger('restore-exif')
 
